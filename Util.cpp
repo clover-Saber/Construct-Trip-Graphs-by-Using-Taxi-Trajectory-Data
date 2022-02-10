@@ -1,5 +1,6 @@
-#include"include/Util.h"
 #include <cmath>
+
+#include"include/Util.h"
 using namespace std;
 
 double distance1(double lon1,double lat1,double lon2,double lat2){
@@ -79,15 +80,25 @@ void searchRtree(RTree<int,double,2, double> &rtree,int j,int endTime,double lon
 }
 
 Timer::Timer(){
+    start = clock(); 
 }
 
 Timer::~Timer(){
 }
 
-void Timer::init(){
-    start = clock(); 
+double Timer::getTimeCost(){
+    return double(clock()-start)/1000;
 }
 
-double Timer::time(){
-    return double(clock()-start)/1000;
+int convertDateToInt(std::string date){
+    //TODO 没考虑闰年大小月
+    int i = date.find("-",0);
+    int j = date.find("-",i+1);
+    return atoi(date.substr(0,i).c_str())*12*31+atoi(date.substr(i+1,j-i-1).c_str())*31+atoi(date.substr(j+1,date.size()-j-1).c_str());
+}
+
+int convertTimeToInt(std::string time){
+    int i = time.find(":",0);
+    int j = time.find(":",i+1);
+    return atoi(time.substr(0,i).c_str())*3600+atoi(time.substr(i+1,j-i-1).c_str())*60+atoi(time.substr(j+1,time.size()-j-1).c_str());
 }

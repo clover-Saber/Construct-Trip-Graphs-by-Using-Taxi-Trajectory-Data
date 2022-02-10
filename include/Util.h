@@ -2,7 +2,8 @@
 #define UTIL_H
 
 #include <vector>
-#include<ctime>
+#include <ctime>
+#include <string>
 
 #include "Point.h"
 #include "RTree.h"
@@ -43,15 +44,16 @@ void searchRtree(RTree<int,double,2, double> &rtree,int j,int endTime,double lon
 class Timer{
   private:
     clock_t start;
-    friend class SharebilityNetwork;
   public:
     Timer();
     ~Timer();
-    void init();
     /**
      * @return 时间间隔,单位/秒
      */
-    double time();
+    double getTimeCost();
 };
+
+int convertDateToInt(std::string date);
+int convertTimeToInt(std::string time);
 
 #endif

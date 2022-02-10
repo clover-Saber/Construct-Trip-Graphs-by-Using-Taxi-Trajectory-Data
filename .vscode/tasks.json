@@ -4,7 +4,7 @@
 		{
 			"type": "cppbuild",
 			"label": "cloveryh",
-			"command": "D:\\soft\\mingw64\\bin\\g++.exe",
+			"command": "D:\\Program Files (x86)\\mingw64\\bin\\g++.exe",
 			"args": [
 				"-g",
 				"${workspaceFolder}\\*.cpp",
@@ -21,7 +21,7 @@
 				"kind": "build",
 				"isDefault": true
 			},
-			"detail": "编译器: D:\\soft\\mingw64\\bin\\g++.exe",
+			"detail": "编译器: D:\\Program Files (x86)\\mingw64\\bin\\g++.exe",
 			"presentation": {
 				"panel": "new"
 			}

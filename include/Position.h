@@ -1,5 +1,5 @@
-#ifndef _POSITION_H
-#define _POSITION_H
+#ifndef POSITION_H
+#define POSITION_H
 #include <string>
 
 //出租车信息类
@@ -30,9 +30,9 @@ class Position{
         //纬度
         double latitude;
         //速度
-        float speed;
+        double speed;
         //方向
-        float direction;
+        double direction;
         //卫星数
         int satelliteNumber;
         //时间，转换为秒，xxx秒
@@ -46,21 +46,15 @@ class Position{
         //或形如：27112,0,1,1,0,0,2015-04-01 00:00:05,2015-04-01,121.487605,31.119665,15.4,75.0,8
         //21027,0,1,V,0,0,2015-04-01 02:09:51,2010-01-01,121.368602,31.255895,30.5,0.0,0
         void init(std::string s);
-        //返回taxiId
-        std::string getTaxiId(){return taxiId;}
-        //返回业务状态
-        char getServiceStatus(){return serviceStatus;}
-        //返回顶灯状态
-        char getLightStatus(){return lightStatus;}
-        //返回GPS日期
-        std::string getReceiveDate(){return receiveDate;}
-        //返回经度
-        double getLongitude(){return longitude;}
-        //返回纬度
-        double getLatitude(){return latitude;}
-        //返回时间
-        int getTime(){return time;}
-        //打印类内容
+        std::string getTaxiId();
+        char getServiceStatus();
+        char getLightStatus();
+        std::string getReceiveDate();
+        std::string getReceiveTime();
+        double getLongitude();
+        double getLatitude();
+        int getTime();
+        double getSpeed();
         void printPosition();
 };
 

@@ -66,7 +66,6 @@ bool SharebilityNetwork::existEdge(int x,int y){
 }
 
 void SharebilityNetwork::init(File &f){
-    timer.init();
     //读取订单点集
     f.readPointVector(vecPoint,orderNumber);
     //分块建立R树
@@ -88,7 +87,7 @@ void SharebilityNetwork::init(File &f){
         vecAns.clear();
         int endTime=vecPoint[i].getEndTime();
         int index=endTime/60;
-        
+ 
         //多线程
         for(int k=0;k<20/threadNumber;k++){
             thread vecTh[threadNumber];
@@ -106,7 +105,7 @@ void SharebilityNetwork::init(File &f){
             for(int z=0;z<threadNumber;z++) vecTh[z].join();
         }
         //剩余时间片
-        int nowThreadNumber = 20%threadNumber;
+        const int nowThreadNumber = 20%threadNumber;
         thread vecTh[nowThreadNumber];
         for(int z=0;z<nowThreadNumber;z++){
             //时间片块数

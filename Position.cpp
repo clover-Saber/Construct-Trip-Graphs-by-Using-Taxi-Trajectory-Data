@@ -1,5 +1,6 @@
-#include "include/Position.h"
 #include <iostream>
+
+#include "include/Position.h"
 using namespace std;
 
 void Position::init(string s){
@@ -61,6 +62,42 @@ void Position::init(string s){
     i = receiveTime.find(":",0);
     j = receiveTime.find(":",i+1);
     time = atoi(receiveTime.substr(0,i).c_str())*3600+atoi(receiveTime.substr(i+1,j-i-1).c_str())*60+atoi(receiveTime.substr(j+1,receiveTime.size()-j-1).c_str());
+}
+
+string Position::getTaxiId(){
+    return taxiId;
+}
+
+char Position::getServiceStatus(){
+    return serviceStatus;
+}
+
+char Position::getLightStatus(){
+    return lightStatus;
+}
+
+string Position::getReceiveDate(){
+    return receiveDate;
+}
+
+string Position::getReceiveTime(){
+    return receiveTime;
+}
+
+double Position::getLongitude(){
+    return longitude;
+}
+        
+double Position::getLatitude(){
+    return latitude;
+}
+
+int Position::getTime(){
+    return time;
+}
+
+double Position::getSpeed(){
+    return speed;
 }
 
 void Position::printPosition(){

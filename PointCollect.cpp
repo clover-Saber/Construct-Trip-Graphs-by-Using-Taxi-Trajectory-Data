@@ -1,31 +1,44 @@
-#include "include/PointCollect.h"
-#include "include/Util.h"
 #include <iostream>
 #include <algorithm>
+#include <fstream>
+#include <iomanip>
+
+#include "include/PointCollect.h"
+#include "include/Util.h"
+#include "include/Parameter.h"
 using namespace std;
 
-PointCollect::~PointCollect(){
-    mapPosition.clear();
-    vecPoint.clear();
-    mileage.clear();
+void PointCollect::readSimplePosition(string filePath){
+    ifstream infile;
+    infile.open(filePath.c_str(),ios::in);
+    SimplePosition sp;
+    string tid;
+    char light;
+    double lat,lon,spd;
+    int date,time;
+    int i = 1;
+    while((i<SIMPLE_POSITION_READ_AMOUNT || SIMPLE_POSITION_READ_AMOUNT==-1) && infile>>tid>>light>>lat>>lon>>spd>>date>>time){
+        if(i%10000000 == 0) cout<<"read:"<<i<<endl;
+        sp.init(tid,light,lat,lon,spd,date,time);
+        //map中没有此车号，将其加入map
+        if(simplePositionMap.find(sp.getTaxiId())==simplePositionMap.end()){
+            vector<SimplePosition> simplePositionList;
+            simplePositionList.push_back(sp);
+            simplePositionMap.insert(pair<string,vector<SimplePosition> >(sp.getTaxiId(),simplePositionList));
+        }else{
+            simplePositionMap[sp.getTaxiId()].push_back(sp);
+        }
+        i++;
+    }
+    infile.close();
 }
 
-void PointCollect::clear(){
-    mapPosition.clear();
-    vecPoint.clear();
-    mileage.clear();
-}
-
-void PointCollect::collect(File &f,string rightDate){
+void PointCollect::collectPoint(){
     int number=0;
     Point p;
-    //是否正在载客
-    bool flag=false;
-    clear();
-    f.readPositionMap(mapPosition,rightDate);
-    map<string,vector<Position> >::iterator it;
-    for(it=mapPosition.begin();it!=mapPosition.end();it++){
-        //cout<<it->first<<endl;
+    bool flag=false; //是否正在载客
+    map<string,vector<SimplePosition> >::iterator it;
+    for(it=simplePositionMap.begin();it!=simplePositionMap.end();it++){
         //只有一个状态就算了
         if(it->second.size()==1) continue;
         //按时间排序，从早到晚
@@ -42,7 +55,7 @@ void PointCollect::collect(File &f,string rightDate){
                     //新增订单
                     vecPoint.push_back(p);
                     //初始化起点信息
-                    vecPoint[vecPoint.size()-1].initStart(it->second[i].getTime(),it->second[i].getLongitude(),it->second[i].getLatitude());
+                    vecPoint[vecPoint.size()-1].initStart(it->second[i].getTimeIntFormat(),it->second[i].getLongitude(),it->second[i].getLatitude());
                     //初始里程0
                     mileage.push_back(0);
                 }else{
@@ -55,22 +68,21 @@ void PointCollect::collect(File &f,string rightDate){
                 if(flag){
                     flag = false;
                     //初始化终点信息
-                    vecPoint[vecPoint.size()-1].initEnd(it->second[i-1].getTime(),it->second[i-1].getLongitude(),it->second[i-1].getLatitude());
+                    vecPoint[vecPoint.size()-1].initEnd(it->second[i-1].getTimeIntFormat(),it->second[i-1].getLongitude(),it->second[i-1].getLatitude());
                     //订单里程筛选
                     if(mileage[mileage.size()-1]<200){
                         vecPoint.pop_back();
                         mileage.pop_back();
                     }
                 }
-            }
-            
+            }    
         }
         //最后订单还未结束，直接结束订单
         //去掉停运数据时需要考虑
         if(flag){
             int i=it->second.size()-1;
             flag = false;
-            vecPoint[vecPoint.size()-1].initEnd(it->second[i].getTime(),it->second[i].getLongitude(),it->second[i].getLatitude());
+            vecPoint[vecPoint.size()-1].initEnd(it->second[i].getTimeIntFormat(),it->second[i].getLongitude(),it->second[i].getLatitude());
             //订单里程筛选
             if(mileage[mileage.size()-1]<200){
                 vecPoint.pop_back();
@@ -80,22 +92,56 @@ void PointCollect::collect(File &f,string rightDate){
     }
 }
 
-void PointCollect::collectOriginalMileage(File &f,string rightDate){
-    int totn=0;
-    originalMileage = 0;
+PointCollect::PointCollect(){
+}
+
+PointCollect::~PointCollect(){
+    simplePositionMap.clear();
+    vecPoint.clear();
+    mileage.clear();
+}
+
+void PointCollect::clear(){
+    simplePositionMap.clear();
+    vecPoint.clear();
+    mileage.clear();
+}
+
+void PointCollect::collectPointFromFile(string filePath){
+    Timer collecClock;
     clear();
-    f.readPositionMapAll(mapPosition,rightDate);
-    map<string,vector<Position> >::iterator it;
-    for(it=mapPosition.begin();it!=mapPosition.end();it++){
+    this->readSimplePosition(filePath);
+    this->collectPoint();
+    cout<<"PointCollect - Cost of time: "<<collecClock.getTimeCost()<<"s"<<endl;
+}
+
+void PointCollect::writePointToFile(string filePath){
+    ofstream outfile;
+    outfile.open(filePath);
+    if(POINT_SORT_METHOD==1){
+        sort(vecPoint.begin(),vecPoint.end(),cmpStart);
+    }else if(POINT_SORT_METHOD==2){
+        sort(vecPoint.begin(),vecPoint.end(),cmpEnd);
+    }
+    outfile<<setprecision(9);
+    for(int i=0;i<vecPoint.size();i++){
+        outfile<<vecPoint[i].getStartTime()<<' '<<vecPoint[i].getStartLongitude()<<' '<<vecPoint[i].getEndLatitude()<<' ';
+        outfile<<vecPoint[i].getEndTime()<<' '<<vecPoint[i].getEndLongitude()<<' '<<vecPoint[i].getEndLatitude()<<endl;
+    } 
+    outfile.close();
+}
+
+void PointCollect::calculateOriginalMileage(File &f,string rightDate){
+    originalMileage = 0;
+    map<string,vector<SimplePosition> >::iterator it;
+    for(it=simplePositionMap.begin();it!=simplePositionMap.end();it++){
         //按时间排序，从早到晚
         sort(it->second.begin(),it->second.end());
         for(int i=1;i<it->second.size();i++){
             //添加两点距离
             originalMileage += distance(it->second[i-1].getLongitude(),it->second[i-1].getLatitude(),it->second[i].getLongitude(),it->second[i].getLatitude()); 
-            totn++;
         }
     }
-    cout<<"totn:"<<totn<<endl;
 }
 
 double PointCollect::getTotalTripMileage(){
@@ -104,40 +150,7 @@ double PointCollect::getTotalTripMileage(){
     return total;
 }
 
-void PointCollect::write(File &f,char *path,int h){
-    if(h==1){
-        //将订单按开始时间进行排序
-        sort(vecPoint.begin(),vecPoint.end(),cmpStart);
-    }else if(h==2){
-        //将订单按结束时间进行排序
-        sort(vecPoint.begin(),vecPoint.end(),cmpEnd);
-    }
-    f.writePointVector(vecPoint,path);
-}
-
-void PointCollect::printMapPosition(){
-    cout<<"MapPositionSize:"<<mapPosition.size()<<endl;
-    /*
-    map<string,vector<Position> >::iterator it;
-    for(it=mapPosition.begin();it!=mapPosition.end();it++){
-        cout<<"["<<it->first<<","<<it->second.size()<<"]"<<endl;
-        for(int i=0;i<it->second.size();i++) it->second[i].printPosition();
-    }
-    */
-}
-
 void PointCollect::printVecPoint(){
-    cout<<"VecPointSize:"<<vecPoint.size()<<endl;
-    cout<<"Mileage:"<<mileage.size()<<endl;
-    /*
-    for(int i=0;i<mileage.size();i++)
-    if(mileage[i]>1000000){
-        cout<<mileage[i]<<endl;
-        cout<<vecPoint[i].getStartTime()<<' '<<vecPoint[i].getEndTime()<<endl;
-        cout<<vecPoint[i].getStartLongitude()<<' '<<vecPoint[i].getStartLatitude()<<' '<<vecPoint[i].getEndLongitude()<<' '<<vecPoint[i].getEndLatitude()<<endl;
-        cout<<distance(vecPoint[i].getStartLongitude(),vecPoint[i].getStartLatitude(),vecPoint[i].getEndLongitude(),vecPoint[i].getEndLatitude())<<endl;
-        cout<<"========="<<endl;
-    }
-    */
-    //for(int i=0;i<vecPoint.size();i++) vecPoint[i].printPoint();
+    cout<<"Amount of vehicles: "<<simplePositionMap.size()<<endl;
+    cout<<"Size of pointFile: "<<vecPoint.size()<<endl;
 }
