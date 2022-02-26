@@ -28,6 +28,7 @@ class SpeedGrid{
         SpeedGrid();
         ~SpeedGrid();
         void updateGridByFile(std::string filePath);
+        double getCellSpeedByMS(int x,int y);
         void printSpeedGrid();
 };
 

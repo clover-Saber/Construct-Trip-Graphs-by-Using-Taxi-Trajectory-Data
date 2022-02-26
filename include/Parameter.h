@@ -17,13 +17,23 @@ const int SIMPLE_POSITION_READ_AMOUNT = -1;
 //订单排序方式，0不排序，1按开始时间排序，2按结束时间排序
 const int POINT_SORT_METHOD = 0;
 
-//订单任务选取数量，-1为全部
-const int POINTNUMBER = 1000;
-
 //时间片划分时间/秒
-const int SLICETIME = 60;
+const int SLICE_TIME = 60;
+const int SLICE_AMOUNT = 20;
+//订单任务选取数量，-1为全部
+const int POINT_AMOUNT = 10000;
+//线程数
+const int THREAD_AMOUNT = 4;
+//搜索方向
+const int DIRECTION_AMOUNT = 4;
+const int DIRECTION_X[] = {0,0,-1,1};
+const int DIRECTION_Y[] = {-1,1,0,0};
+const int INF = 100000007;
 
 //速度网格相关参数
+//经度相等的情况下,纬度每隔1度，距离相差约111320米
+const int EVERY_LATITUDE_DISTANCE = 111320;
+const int EVERY_LONGITUDE_DISTANCE = 100000;
 const double CELL_LATITUDE_LENGTH = 0.1;
 const double CELL_LONGITUDE_LENGTH = 0.1;
 const double START_LATITUDE = 30.666;

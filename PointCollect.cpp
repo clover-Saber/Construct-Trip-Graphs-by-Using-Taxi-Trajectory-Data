@@ -112,7 +112,7 @@ void PointCollect::collectPointFromFile(string filePath){
     clear();
     this->readSimplePosition(filePath);
     this->collectPoint();
-    cout<<"PointCollect - Cost of time: "<<collecClock.getTimeCost()<<"s"<<endl;
+    cout<<"[PointCollect] - Cost of time: "<<collecClock.getTimeCost()<<"s"<<endl;
 }
 
 void PointCollect::writePointToFile(string filePath){

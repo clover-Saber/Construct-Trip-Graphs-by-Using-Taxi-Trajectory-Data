@@ -66,6 +66,7 @@ void PositionClean::cleanPositionFromFile(string filePath){
     simplePositionFile.clear();
     errorServiceStatusAmount = 0;
     errorLightStatusAmount = 0;
+    beyondBoundaryAmount = 0;
 
     ifstream infile;
     infile.open(filePath.c_str(),ios::in);
@@ -86,6 +87,10 @@ void PositionClean::cleanPositionFromFile(string filePath){
             errorLightStatusAmount++;
             positionIsNormal = false;
         }
+        if(p.getLatitude()<START_LATITUDE || p.getLatitude()>END_LATITUDE || p.getLongitude()<START_LONGITUDE || p.getLongitude()>END_LONGITUDE){
+            beyondBoundaryAmount++;
+            positionIsNormal = false;
+        }
         if(positionIsNormal){
             int date = convertDateToInt(p.getReceiveDate());
             int time = convertTimeToInt(p.getReceiveTime());
@@ -96,7 +101,7 @@ void PositionClean::cleanPositionFromFile(string filePath){
         i++;
     }
     infile.close();
-    cout<<"PositionClean - Cost of time: "<<cleanClock.getTimeCost()<<"s"<<endl;
+    cout<<"[PositionClean] - Cost of time: "<<cleanClock.getTimeCost()<<"s"<<endl;
 }
 
 void PositionClean::writeSimplePositionToFile(string filePath){
@@ -115,4 +120,5 @@ void PositionClean::printPointClean(){
     cout<<"Size of simplePositionFile: "<<simplePositionFile.size()<<endl;
     cout<<"Amount of abnormal serviceStatus: "<<errorServiceStatusAmount<<endl;
     cout<<"Amount of abnormal lightStatus: "<<errorLightStatusAmount<<endl;
+    cout<<"Amount of beyond the boundary: "<<beyondBoundaryAmount<<endl;
 }

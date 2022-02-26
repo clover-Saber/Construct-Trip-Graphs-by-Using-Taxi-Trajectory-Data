@@ -20,7 +20,6 @@ int main(){
     roadNet.printNetwork();
     */
 
-    /*
     //构建车辆速度网格
     SpeedGrid speedGrid;
     for(int i=0;i<SPEED_GRID_FILE_LIST.size();i++){
@@ -28,7 +27,6 @@ int main(){
         speedGrid.updateGridByFile(speedFilePath);
     }
     speedGrid.printSpeedGrid();
-    */
 
     for(int i=0;i<POSITION_FILE_LIST.size();i++){
         cout<<POSITION_FILE_LIST[i];
@@ -40,10 +38,11 @@ int main(){
         positionClean.cleanPositionFromFile(positionFilePath);
         string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
         positionClean.writeSimplePositionToFile(simplePositionFilePath);
+        positionClean.printPointClean();
         */
         /*
         //2-提取订单信息
-        string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
+        //string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
         PointCollect pointCollect;
         pointCollect.collectPointFromFile(simplePositionFilePath);
         string pointFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//point.txt";
@@ -65,12 +64,11 @@ int main(){
         
         //3-构建出行任务图
         string pointFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//point.txt";
-        File pointFile(pointFilePath);
     
-        SharebilityNetwork shareNet;
-        shareNet.init(pointFile);
-        shareNet.printVecPoint();
-        shareNet.printVecEdge();
+        SharebilityNetwork sharebilityNetwork(&speedGrid);
+        //sharebilityNetwork.buildNetworkFromFile(pointFilePath);
+        sharebilityNetwork.buildNetworkFromFile_bySpeedGrid(pointFilePath);
+        sharebilityNetwork.printNetwork();
         
         /*
         //匈牙利算法

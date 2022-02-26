@@ -22,11 +22,12 @@ void SpeedCell::addSpeedData(double speedDataOne){
 }
 
 void SpeedCell::calculateAverageSpeed(){
-    if(speedDataAmount==0) averageSpeed = 0;
+    if(speedDataAmount == 0) averageSpeed = 0;
     else averageSpeed = totalSpeed/speedDataAmount;
 }
 
 double SpeedCell::getAverageSpeed(){
+    if(averageSpeed == 0) return 0.001;
     return averageSpeed;
 }
 
@@ -80,11 +81,15 @@ void SpeedGrid::updateGridByFile(string filePath){
         for(int j=0;j<grid[i].size();j++){
             grid[i][j].calculateAverageSpeed();
         }
-    cout<<"SpeedGrid-更新速度网格花费时间: "<<updateClock.getTimeCost()<<"s ["<<filePath<<"]"<<endl;
+    cout<<"[SpeedGrid] - Cost of time: "<<updateClock.getTimeCost()<<"s ["<<filePath<<"]"<<endl;
+}
+
+double SpeedGrid::getCellSpeedByMS(int x,int y){
+    return grid[x][y].getAverageSpeed()/3.6;
 }
 
 void SpeedGrid::printSpeedGrid(){
-    cout<<"SpeedGrid-打印速度网格"<<endl;
+    cout<<"print SpeedGrid"<<endl;
     for(int i=0;i<grid.size();i++)
         for(int j=0;j<grid[i].size();j++){
             cout<<"("<<i<<","<<j<<"): "<<grid[i][j].getAverageSpeed()<<" "<<grid[i][j].getTotalSpeed()<<" "<<grid[i][j].getSpeedDataAmount()<<endl;

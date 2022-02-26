@@ -36,6 +36,7 @@ class PositionClean{
         std::vector<SimplePosition> simplePositionFile;
         int errorServiceStatusAmount;
         int errorLightStatusAmount;
+        int beyondBoundaryAmount;
     public:
         PositionClean();
         ~PositionClean();

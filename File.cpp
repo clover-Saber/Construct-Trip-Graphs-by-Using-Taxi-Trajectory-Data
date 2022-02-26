@@ -27,7 +27,7 @@ string File::readDateMap(map<string,int> &mapD){
     //读取一行string
     getline(infile,s);
     //n=-1表示全部读取
-    while(s!="" && (i<POINTNUMBER || POINTNUMBER==-1)){
+    while(s!="" && (i<POINT_AMOUNT || POINT_AMOUNT==-1)){
         //查看进度
         if(i%10000000==0) cout<<"read:"<<i<<endl;
         p.init(s);
@@ -62,7 +62,7 @@ void File::readPositionMap(map<string,vector<Position> > &mapP,string rigthDate)
     //读取一行string
     getline(infile,s);
     //n=-1表示全部读取
-    while(s!="" && (i<POINTNUMBER || POINTNUMBER==-1)){
+    while(s!="" && (i<POINT_AMOUNT || POINT_AMOUNT==-1)){
         //查看进度
         if(i%10000000==0) cout<<"read:"<<i<<endl;
         p.init(s);
@@ -93,7 +93,7 @@ void File::readPositionMapAll(map<string,vector<Position> > &mapP,string rigthDa
     //读取一行string
     getline(infile,s);
     //n=-1表示全部读取
-    while(s!="" && (i<POINTNUMBER || POINTNUMBER==-1)){
+    while(s!="" && (i<POINT_AMOUNT || POINT_AMOUNT==-1)){
         //查看进度
         if(i%10000000==0) cout<<"read:"<<i<<endl;
         p.init(s);
@@ -118,15 +118,15 @@ void File::readPositionMapAll(map<string,vector<Position> > &mapP,string rigthDa
 void File::readPointVector(vector<Point> &vecP,vector<int> &num){
     vector<vector<Point>> tp;
     vector<Point> t;
-    for(int i=0; i<24*60*60/SLICETIME; i++) tp.push_back(t);
+    for(int i=0; i<24*60*60/SLICE_TIME; i++) tp.push_back(t);
     Point p;
     double sx,sy,ex,ey; //经纬度
     int st,et; //时间
     int i = 0;
     //读取point.txt文件
-    while((i<POINTNUMBER || POINTNUMBER==-1) && infile>>st>>sx>>sy>>et>>ex>>ey){
+    while((i<POINT_AMOUNT || POINT_AMOUNT==-1) && infile>>st>>sx>>sy>>et>>ex>>ey){
         p.init(st,sx,sy,et,ex,ey);
-        int order = st/SLICETIME;
+        int order = st/SLICE_TIME;
         tp[order].push_back(p);
         i++;
     }
