@@ -19,15 +19,20 @@ int main(){
     roadNet.init(roadPath); 
     roadNet.printNetwork();
     */
-
     //构建车辆速度网格
     SpeedGrid speedGrid;
+    string speedGridFilePath = BASE_PATH + "speedGrid.txt";
+    //1>直接读取现有网格
+    speedGrid.readGridByFile(speedGridFilePath);
+    /*
+    //2>构建网格
     for(int i=0;i<SPEED_GRID_FILE_LIST.size();i++){
         string speedFilePath = BASE_PATH + SPEED_GRID_FILE_LIST[i] + "//part-00000//part-00000.txt";
         speedGrid.updateGridByFile(speedFilePath);
     }
+    speedGrid.writeSpeedGirdToFile(speedGridFilePath);
     speedGrid.printSpeedGrid();
-
+    */
     for(int i=0;i<POSITION_FILE_LIST.size();i++){
         cout<<POSITION_FILE_LIST[i];
         cout<<"--------------------------"<<endl;
@@ -42,7 +47,7 @@ int main(){
         */
         /*
         //2-提取订单信息
-        //string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
+        string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
         PointCollect pointCollect;
         pointCollect.collectPointFromFile(simplePositionFilePath);
         string pointFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//point.txt";
@@ -51,7 +56,7 @@ int main(){
         */
 
         //File positionFile(positionFilePath);
-        //文件中每个日期的数据量
+        //文件中每个日期的数据量 
         //map<string,int> mapDate;
         //string rightDate=positionFile.readDateMap(mapDate); 
         /*
@@ -64,12 +69,12 @@ int main(){
         
         //3-构建出行任务图
         string pointFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//point.txt";
-    
         SharebilityNetwork sharebilityNetwork(&speedGrid);
         //sharebilityNetwork.buildNetworkFromFile(pointFilePath);
         sharebilityNetwork.buildNetworkFromFile_bySpeedGrid(pointFilePath);
         sharebilityNetwork.printNetwork();
         
+
         /*
         //匈牙利算法
         HungaryAlgorithm algorithm1;

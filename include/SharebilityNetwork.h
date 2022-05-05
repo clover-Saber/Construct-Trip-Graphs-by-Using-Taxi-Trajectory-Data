@@ -20,6 +20,15 @@ struct SpeedCellIndex{
     }
 };
 
+//速度单元合并范围
+struct SpeedCellRange{
+    //左上角cell下标和右下角cell下标
+    int lx,ly,rx,ry;
+    int reachableAmount; //可达网格数
+    SpeedCellRange(int lx,int ly,int rx,int ry) :lx(lx), ly(ly), rx(rx), ry(ry){}
+    SpeedCellRange(int lx,int ly,int rx,int ry,int ra) :lx(lx), ly(ly), rx(rx), ry(ry), reachableAmount(ra){} 
+};
+
 //连接边类，单向
 class Edge{
     private:
@@ -47,10 +56,18 @@ class SharebilityNetwork{
         std::vector<int> orderNumber;
         //R树,vector莫名报错
         RTree<int,double,2, double> vecTree[1440];
-
+        //第i分钟可达的速度网格队列
         std::vector<std::vector<SpeedCellIndex>> speedCellIndexList;
-
-
+        //第i个时间片(或前i分钟)可达的速度网络范围队列（合并后）
+        std::vector<std::vector<SpeedCellRange>> speedCellRangeList;
+        //第i分钟搜出来的可达范围边界
+        std::vector<SpeedCellRange> speedCellLimit;
+        //除法计算时间
+        double divisionCalculationTime;
+        //查询总块数
+        int blockTotalAmount = 0;
+        //队列元素数
+        int queueTotalAmount = 0;
         //订单点集
         std::vector<Point> vecPoint;
         //边集数组，存放边
@@ -64,7 +81,15 @@ class SharebilityNetwork{
         friend class HopcroftKarpAlgorithm;
 
         void readPoint(std::string filePath);
-        void fetchSpeedCellIndexList(int startx,int starty,int currentSliceAmount);
+        //可达网格搜索
+        void fetchReachableSpeedCells(int startX,int startY,int currentSliceAmount);
+        void fetchReachableSpeedCells_byMerge(int startX,int startY,int currentSliceAmount);
+        void fetchReachableSpeedCells_byPriorityQueueMerge(int startX,int startY,int currentSliceAmount);
+        //网格车辆查询
+        void cellQuery(int index,int currentSliceAmount);
+        //网格车辆查询-网格合并分治法
+        void cellQuery_byDivideAndConquer(int index,int currentSliceAmount);
+        void cellQuery_byPriorityQueueMerge(int index,int currentSliceAmount);
     public:
         SharebilityNetwork(SpeedGrid *sg);
         ~SharebilityNetwork();

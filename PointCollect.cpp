@@ -43,6 +43,13 @@ void PointCollect::collectPoint(){
         if(it->second.size()==1) continue;
         //按时间排序，从早到晚
         sort(it->second.begin(),it->second.end());
+
+        /*
+        if(it->second.size()>1000){
+            for(int i=0;i<it->second.size();i++) cout<<it->second[i].getTimeIntFormat()<<" "<<it->second[i].getLatitude()<<" "<<it->second[i].getLongitude()<<" "<<it->second[i].getLightStatus()<<" "<<it->second[i].getSpeed()<<endl;return;
+        }else continue;
+        */
+
         //连续的一段运营状态即视为一个订单
         //持续时间近似为第一个运营状态时间到最后一个运营状态结束时间(即其后的第一个非运营状态时间)
         for(int i=0;i<it->second.size();i++){
