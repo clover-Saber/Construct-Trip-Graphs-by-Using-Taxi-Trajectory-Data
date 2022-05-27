@@ -20,15 +20,15 @@ const int POINT_SORT_METHOD = 0;
 
 //时间片划分时间/秒
 const int SLICE_TIME = 60;
-const int SLICE_AMOUNT = 20;
+const int SLICE_AMOUNT = 15;
 //订单任务选取数量，-1为全部
-const int POINT_AMOUNT = 10000;
+const int POINT_AMOUNT = 300000;
 //线程数
 const int THREAD_AMOUNT = 4;
 //搜索方向
-const int DIRECTION_AMOUNT = 4;
-const int DIRECTION_X[] = {0,0,-1,1};
-const int DIRECTION_Y[] = {-1,1,0,0};
+const int DIRECTION_AMOUNT = 8;
+const int DIRECTION_X[] = {0,0,-1,1,-1,-1,1,1};
+const int DIRECTION_Y[] = {-1,1,0,0,-1,1,-1,1};
 const int INF = 100000007;
 
 //速度网格相关参数
@@ -42,7 +42,7 @@ const double END_LATITUDE = 31.884;
 const double START_LONGITUDE = 120.866;
 const double END_LONGITUDE = 122.200;
 //构建网格的文件相对路径
-const std::vector<std::string> SPEED_GRID_FILE_LIST = {"01"};//,"04","07","08","09","10","11","12","14","15","18","24"};
+const std::vector<std::string> SPEED_GRID_FILE_LIST = {"01","04","07","08","09","10","11","12","14","15","18","24"};
 //速度网格的行列格子数
 const int INDEX_AMOUNT = ceil((END_LATITUDE-START_LATITUDE)/CELL_LATITUDE_LENGTH);
 const int INDEY_AMOUNT = ceil((END_LONGITUDE-START_LONGITUDE)/CELL_LONGITUDE_LENGTH);
@@ -63,6 +63,6 @@ const double DIRECTION_DISTANCE[] = {
 //网格合并的最大合并大小,要是2的n次方，例如16*16
 const int MAX_CELL_RANGE = 16;
 //网格合并要求分值
-const double STANDARD_RATE = 0.5;
+const double STANDARD_RATE = 0.9;
 
 #endif

@@ -21,7 +21,7 @@ int main(){
     */
     //构建车辆速度网格
     SpeedGrid speedGrid;
-    string speedGridFilePath = BASE_PATH + "speedGrid.txt";
+    string speedGridFilePath = BASE_PATH + "speedGrid100m.txt";
     //1>直接读取现有网格
     speedGrid.readGridByFile(speedGridFilePath);
     /*

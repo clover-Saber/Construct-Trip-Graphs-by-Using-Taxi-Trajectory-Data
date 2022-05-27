@@ -127,7 +127,7 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
     //到达每个cell的最短时间
     vector<vector<int> > minTime;
     //每个cell对应的block下标
-    vector<vector<int>> blockIndex;
+    vector<vector<int>> blockIndex; 
     vector<int> timeTmp; 
     vector<int> blockTmp;
     for(int i=0; i<INDEY_AMOUNT; i++){
@@ -180,10 +180,14 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
         }
         //将当前cell进行合并，只有上下左右4个方向
         //该cell已合并
-        if(blockIndex[currentCell.x][currentCell.y] != -1) continue;
+        if(blockIndex[currentCell.x][currentCell.y] != -1){
+            currentSpeedCellRange[blockIndex[currentCell.x][currentCell.y]].reachableAmount++;
+            continue; 
+        }
         double maxReachableRate = STANDARD_RATE; //必须高于标准分值
         int maxRateDirection = -1; //最高得分合并方向
         int maxRateBlockIndex = -1; //最高得分block下标
+        int maxreachableAmount = -1; //最高得分的可达网格数
         for(int i=0;i<4;i++){
             int neighborX = currentCell.x + DIRECTION_X[i];
             int neighborY = currentCell.y + DIRECTION_Y[i];
@@ -194,37 +198,35 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
             //当前block下标
             int currentBlockIndex = blockIndex[neighborX][neighborY];
             SpeedCellRange *currentBlock = &currentSpeedCellRange[currentBlockIndex];
-
-            int reachableAmount = 1; //可达网格数
-            int totalAmount;
-            double rate = double(reachableAmount)/double(totalAmount);
-            if(rate > maxReachableRate){
-                maxReachableRate = rate;
-                maxRateDirection = i;
-                maxRateBlockIndex = currentBlockIndex;
-            }
-            
+            int reachableAmount = currentBlock->reachableAmount+1; //block可达网格数
+            int totalAmount = (currentBlock->rx-currentBlock->lx+1)*(currentBlock->ry-currentBlock->ly+1); //block网格总数
+            bool noDuplicateFlag = true;
             if(DIRECTION_X[i] == 0){
                 totalAmount = currentBlock->rx-currentBlock->lx;
-                for(int j=currentBlock->lx;j<=currentCell.x-1;j++){
-                    //此处无速度或估计可达(从相邻点走)
-                    int estimatedTime = minTime[j][neighborY] + speedGrid->getCellSpendTime(j,neighborY,i) + speedGrid->getCellSpendTime(j,currentCell.y,i);
-                    if(speedGrid->getCellSpeedByMS(j,currentCell.y)<0.01 || estimatedTime<SLICE_TIME*currentSliceAmount) reachableAmount++;
-                }
-                for(int j=currentCell.x+1;j<=currentBlock->rx;j++){
-                    int estimatedTime = minTime[j][neighborY] + speedGrid->getCellSpendTime(j,neighborY,i) + speedGrid->getCellSpendTime(j,currentCell.y,i);
-                    if(speedGrid->getCellSpeedByMS(j,currentCell.y)<0.01 || estimatedTime<SLICE_TIME*currentSliceAmount) reachableAmount++;
+                for(int j=currentBlock->lx;j<=currentBlock->rx;j++){
+                    //不允许重复网格
+                    if(blockIndex[j][currentCell.y] != -1){
+                        noDuplicateFlag = false;
+                        break;
+                    }
+                    if(speedGrid->getCellSpeedByMS(j,currentCell.y)<0.01) reachableAmount++;
                 }
             }else if(DIRECTION_Y[i] == 0){
                 totalAmount = currentBlock->ry-currentBlock->ly;
-                for(int j=currentBlock->ly;j<=currentCell.y-1;j++){
-                    int estimatedTime = minTime[neighborX][j] + speedGrid->getCellSpendTime(neighborX,j,i) + speedGrid->getCellSpendTime(currentCell.x,j,i);
-                    if(speedGrid->getCellSpeedByMS(currentCell.x,j)<0.01 || estimatedTime<SLICE_TIME*currentSliceAmount) reachableAmount++;
+                for(int j=currentBlock->ly;j<=currentBlock->ry;j++){
+                    if(blockIndex[currentCell.x][j] != -1){
+                        noDuplicateFlag = false;
+                        break;
+                    }
+                    if(speedGrid->getCellSpeedByMS(currentCell.x,j)<0.01) reachableAmount++;
                 }
-                for(int j=currentCell.y+1;j<=currentBlock->ry;j++){
-                    int estimatedTime = minTime[neighborX][j] + speedGrid->getCellSpendTime(neighborX,j,i) + speedGrid->getCellSpendTime(currentCell.x,j,i);
-                    if(speedGrid->getCellSpeedByMS(currentCell.x,j)<0.01 || estimatedTime<SLICE_TIME*currentSliceAmount) reachableAmount++;
-                }
+            }
+            double rate = double(reachableAmount)/double(totalAmount);
+            if(noDuplicateFlag && rate > maxReachableRate){
+                maxReachableRate = rate;
+                maxRateDirection = i;
+                maxRateBlockIndex = currentBlockIndex;
+                maxreachableAmount = reachableAmount;
             }
         }
         if(maxRateDirection == -1){
@@ -252,8 +254,8 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
                     blockIndex[currentCell.x][j] = maxRateBlockIndex;
                 }
             }
-            //可达网格数量加一
-            currentSpeedCellRange[maxRateBlockIndex].reachableAmount++;
+            //可达网格数量更新
+            currentSpeedCellRange[maxRateBlockIndex].reachableAmount = maxreachableAmount;
         }
     }
     for(int i=0;i<currentSpeedCellRange.size();i++){

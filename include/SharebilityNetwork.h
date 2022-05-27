@@ -75,7 +75,7 @@ class SharebilityNetwork{
         //head[i]表示点i连接的第一条边的下标（实际为最后一条，顺序无碍）
         std::vector<int> head;
         //最长允许连接的时间 15min
-        static const int maxLimitTime=20*60;
+        static const int maxLimitTime=15*60;
         //友元类
         friend class HungaryAlgorithm;
         friend class HopcroftKarpAlgorithm;
