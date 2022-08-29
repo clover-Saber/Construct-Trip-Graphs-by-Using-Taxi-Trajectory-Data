@@ -1,4 +1,6 @@
 #include <cmath>
+#include <fstream>
+#include <iostream>
 
 #include"include/Util.h"
 using namespace std;
@@ -101,4 +103,36 @@ int convertTimeToInt(std::string time){
     int i = time.find(":",0);
     int j = time.find(":",i+1);
     return atoi(time.substr(0,i).c_str())*3600+atoi(time.substr(i+1,j-i-1).c_str())*60+atoi(time.substr(j+1,time.size()-j-1).c_str());
+}
+
+struct UtilNode{
+    int id;
+    double x1,y1,x2,y2;
+    UtilNode(int a,double b,double c,double d,double e){
+        id = a;
+        x1 = b;
+        y1 = c;
+        x2 = d;
+        y2 = e;
+    }
+};
+
+
+//计算满足一定距离的点
+void tripTaskGraph(string path){
+    ifstream infile;
+    infile.open(path.c_str(),ios::in);
+    int id;
+    double x1,y1,x2,y2;
+    vector<UtilNode> u;
+    while(infile>>id>>x1>>y1>>x2>>y2){
+        UtilNode t(id,x1,y1,x2,y2);
+        u.push_back(t);
+    }
+    //for(int i=0;i<u.size();i++) cout<<u[i].id<<' '<<u[i].x1<<' '<<u[i].y1<<' '<<u[i].x2<<' '<<u[i].y2<<endl;
+    for(int i=0;i<u.size();i++)
+        for(int j=i+1;j<u.size();j++){
+            if(sqrt((u[i].x2-u[j].x1)*(u[i].x2-u[j].x1)+(u[i].y2-u[j].y1)*(u[i].y2-u[j].y1)) < 0.06)
+                cout<<u[i].id<<' '<<u[i].x2<<' '<<u[i].y2<<' '<<u[j].id<<' '<<u[j].x1<<' '<<u[j].y1<<endl;
+        }
 }

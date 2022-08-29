@@ -100,14 +100,6 @@ void SpeedGrid::updateGridByFile(string filePath){
     for(int i=0;i<grid.size();i++)
         for(int j=0;j<grid[i].size();j++){
             grid[i][j].calculateAverageSpeed();
-            //统计不同速度段的网格数
-            if(grid[i][j].getAverageSpeed()<0 || grid[i][j].getAverageSpeed()>200) continue;
-            if(grid[i][j].getAverageSpeed()-0.001 < 1e-6){
-                zeroSpeedAmount++;
-                continue;
-            }
-            int t = floor(grid[i][j].getAverageSpeed()/10);
-            speedAmount[t]++;
         }
     cout<<"[SpeedGrid] - Cost of time: "<<updateClock.getTimeCost()<<"s ["<<filePath<<"]"<<endl;
 }
@@ -156,6 +148,17 @@ void SpeedGrid::printSpeedGrid(){
             cout<<grid[i][j].getSpeedDataAmount()<<" "<<grid[i][j].getZeroAmount()<<endl;
         }
     */
+   for(int i=0;i<grid.size();i++)
+        for(int j=0;j<grid[i].size();j++){
+            //统计不同速度段的网格数
+            if(grid[i][j].getAverageSpeed()<0 || grid[i][j].getAverageSpeed()>200) continue;
+            if(grid[i][j].getAverageSpeed()-0.001 < 1e-6){
+                zeroSpeedAmount++;
+                continue;
+            }
+            int t = floor(grid[i][j].getAverageSpeed()/10);
+            speedAmount[t]++;
+        }
    cout<<"0 "<<zeroSpeedAmount<<endl;
    for(int i=0;i<20;i++) cout<<i*10<<"~"<<i*10+10<<" "<<speedAmount[i]<<endl;
 }

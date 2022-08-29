@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
-#include <thread>
+//#include <thread>
 
 #include "include/SharebilityNetwork.h"
 #include "include/Parameter.h"
@@ -174,6 +174,10 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
             divisionCalculationTime += divisionClock.getTimeCost();
             //不超过时间阈值，并且不重复前往耗时更长的cell
             if(nextTime<SLICE_TIME*currentSliceAmount && nextTime<minTime[nextX][nextY]){
+                //该cell已合并并且未到达
+                if(blockIndex[nextX][nextY] != -1 && minTime[nextX][nextY] == INF){
+                    currentSpeedCellRange[blockIndex[nextX][nextY]].reachableAmount++;
+                }
                 minTime[nextX][nextY] = nextTime;
                 q.push(SpeedCellIndex(nextX,nextY,nextTime));
             }
@@ -181,7 +185,6 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
         //将当前cell进行合并，只有上下左右4个方向
         //该cell已合并
         if(blockIndex[currentCell.x][currentCell.y] != -1){
-            currentSpeedCellRange[blockIndex[currentCell.x][currentCell.y]].reachableAmount++;
             continue; 
         }
         double maxReachableRate = STANDARD_RATE; //必须高于标准分值
@@ -202,7 +205,7 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
             int totalAmount = (currentBlock->rx-currentBlock->lx+1)*(currentBlock->ry-currentBlock->ly+1); //block网格总数
             bool noDuplicateFlag = true;
             if(DIRECTION_X[i] == 0){
-                totalAmount = currentBlock->rx-currentBlock->lx;
+                totalAmount += (currentBlock->rx-currentBlock->lx+1);
                 for(int j=currentBlock->lx;j<=currentBlock->rx;j++){
                     //不允许重复网格
                     if(blockIndex[j][currentCell.y] != -1){
@@ -212,22 +215,23 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
                     if(speedGrid->getCellSpeedByMS(j,currentCell.y)<0.01) reachableAmount++;
                 }
             }else if(DIRECTION_Y[i] == 0){
-                totalAmount = currentBlock->ry-currentBlock->ly;
+                totalAmount += (currentBlock->ry-currentBlock->ly+1);
                 for(int j=currentBlock->ly;j<=currentBlock->ry;j++){
                     if(blockIndex[currentCell.x][j] != -1){
                         noDuplicateFlag = false;
                         break;
-                    }
+                    } 
                     if(speedGrid->getCellSpeedByMS(currentCell.x,j)<0.01) reachableAmount++;
                 }
             }
             double rate = double(reachableAmount)/double(totalAmount);
             if(noDuplicateFlag && rate > maxReachableRate){
+                //if(rate<1) cout<<rate<<'='<<reachableAmount<<'/'<<totalAmount<<' ';
                 maxReachableRate = rate;
                 maxRateDirection = i;
                 maxRateBlockIndex = currentBlockIndex;
                 maxreachableAmount = reachableAmount;
-            }
+            } 
         }
         if(maxRateDirection == -1){
             currentSpeedCellRange.push_back(SpeedCellRange(currentCell.x,currentCell.y,currentCell.x,currentCell.y,1));
@@ -494,6 +498,10 @@ void SharebilityNetwork::buildNetworkFromFile_bySpeedGrid(string filePath){
     readPoint(filePath);
      //分块建立R树,只有orderNumber.size()-1块
     for(int i=0;i<orderNumber.size()-1;i++){
+        if(i%60 == 0){
+            cout<<i/60<<":"<<(orderNumber[i+60]-orderNumber[i]);
+            cout<<endl;
+        }
         for(int j=orderNumber[i];j<orderNumber[i+1];j++){
             //节点
             Rect rt(vecPoint[j].getStartLatitude(),vecPoint[j].getStartLongitude());
@@ -544,7 +552,7 @@ void SharebilityNetwork::buildNetworkFromFile_bySpeedGrid(string filePath){
     cout<<"[SharebilityNetWork] - Cost of time: "<<buildClock.getTimeCost()<<"s"<<endl;
 }
 
-
+/*
 void SharebilityNetwork::buildNetworkFromFile_multithread(string filePath){
     Timer buildClock;
     readPoint(filePath);
@@ -584,7 +592,8 @@ void SharebilityNetwork::buildNetworkFromFile_multithread(string filePath){
         for(int j=0;j<vecAns.size();j++) addEdge(i,vecAns[j]);
     }
     cout<<"[SharebilityNetWork] - Cost of time: "<<buildClock.getTimeCost()<<"s"<<endl;
-}
+}*/
+
 
 void SharebilityNetwork::addEdge(int x,int y){
     Edge e;

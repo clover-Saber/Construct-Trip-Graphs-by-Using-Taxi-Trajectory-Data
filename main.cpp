@@ -9,10 +9,13 @@
 #include "include/HopcroftKarpAlgorithm.h"
 #include "include/RoadNetwork.h"
 #include "include/SpeedGrid.h"
+#include"include/Util.h"
 using namespace std;
 
 int main(){
-    /*
+    //string file = BASE_PATH + "tripTaskGraph.txt";
+    //tripTaskGraph(file);
+    /*  
     //建立路网
     char roadPath[100]="C://Users//stud//Desktop//1.txt";
     RoadNetwork roadNet;
@@ -21,7 +24,7 @@ int main(){
     */
     //构建车辆速度网格
     SpeedGrid speedGrid;
-    string speedGridFilePath = BASE_PATH + "speedGrid100m.txt";
+    string speedGridFilePath = BASE_PATH + "speedGrid500m.txt";
     //1>直接读取现有网格
     speedGrid.readGridByFile(speedGridFilePath);
     /*
@@ -40,14 +43,14 @@ int main(){
         //1-对初始位置文件进行清洗
         string positionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//part-00000//part-00000.txt";
         PositionClean positionClean;
-        positionClean.cleanPositionFromFile(positionFilePath);
+        positionClean.cleanPositionFromFile(p  ositionFilePath);
         string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
         positionClean.writeSimplePositionToFile(simplePositionFilePath);
         positionClean.printPointClean();
         */
         /*
         //2-提取订单信息
-        string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
+        //string simplePositionFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//simplePosition.txt";
         PointCollect pointCollect;
         pointCollect.collectPointFromFile(simplePositionFilePath);
         string pointFilePath = BASE_PATH + POSITION_FILE_LIST[i] + "//point.txt";

@@ -20,7 +20,7 @@ bool cmpEnd(Point &x,Point &y);
 class Rect{
   public:
     double min[2];
-    double max[2];
+    double max[2];    
     Rect();
     Rect(double x, double y);
     //区块
@@ -55,5 +55,7 @@ class Timer{
 
 int convertDateToInt(std::string date);
 int convertTimeToInt(std::string time);
+
+void tripTaskGraph(std::string path);
 
 #endif

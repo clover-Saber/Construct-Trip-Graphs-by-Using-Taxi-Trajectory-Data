@@ -15,7 +15,7 @@
             "environment": [],
             "console": "integratedTerminal",
             "MIMode": "gdb",
-            "miDebuggerPath": "D:\\soft\\mingw64\\bin\\g++.exe",
+            "miDebuggerPath": "C:\\softWare\\mingw64\\bin\\g++.exe",
             "setupCommands": [
                 {
                     "description": "为 gdb 启用整齐打印",
