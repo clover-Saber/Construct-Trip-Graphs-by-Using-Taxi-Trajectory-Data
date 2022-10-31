@@ -300,7 +300,7 @@ class MCMF_CS2
 	void print_graph();
 	void finishup( double *objective_cost);
 	void cs2( double *objective_cost);
-	int run_cs2();
+	double run_cs2();
 
 	// shared utils;
 	void increase_flow( NODE *i, NODE *j, ARC *a, long df) {

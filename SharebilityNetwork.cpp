@@ -1,14 +1,30 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
-//#include <thread>
+#include <algorithm>
 
 #include "include/SharebilityNetwork.h"
+#include "include/mcmf.h"
 #include "include/Parameter.h"
-#include "include/Util.h"
 using namespace std;
 
 vector<int> vecAns;
+
+struct SpeedCellIndex{
+    int x,y,time;
+    SpeedCellIndex(int x,int y,int time) :x(x), y(y), time(time){}
+    bool operator < (const SpeedCellIndex& t) const{
+        return time > t.time;
+    }
+};
+
+struct SpeedCellRange{
+    //左上角cell下标和右下角cell下标
+    int lx,ly,rx,ry;
+    int reachableAmount; //可达网格数
+    SpeedCellRange(int lx,int ly,int rx,int ry) :lx(lx), ly(ly), rx(rx), ry(ry){}
+    SpeedCellRange(int lx,int ly,int rx,int ry,int ra) :lx(lx), ly(ly), rx(rx), ry(ry), reachableAmount(ra){} 
+};
 
 Edge::Edge(){
 
@@ -40,37 +56,57 @@ void Edge::printEdge(){
     printf("[%d,%d,%d]",start,end,next);
 }
 
+SharebilityNetwork::SharebilityNetwork(SpeedGrid *sg){
+    speedGrid = sg;
+    const int INDEX_AMOUNT = (END_LATITUDE-START_LATITUDE)/CELL_LATITUDE_LENGTH;
+    const int INDEY_AMOUNT = (END_LONGITUDE-START_LONGITUDE)/CELL_LONGITUDE_LENGTH;
+}
+
+SharebilityNetwork::~SharebilityNetwork(){
+    vecPoint.clear();
+    vecEdge.clear();
+    head.clear();
+}
+
 void SharebilityNetwork::readPoint(string filePath){
     ifstream infile;
     infile.open(filePath.c_str(),ios::in);
-    vector<vector<Point>> tp;
-    vector<Point> t;
-    for(int i=0; i<24*60*60/SLICE_TIME; i++) tp.push_back(t);
     Point p;
     double sx,sy,ex,ey; //经纬度
     int st,et; //时间
     int i = 0;
+    int j = 0; //时间片下标
     //读取point.txt文件
     while((i<POINT_AMOUNT || POINT_AMOUNT==-1) && infile>>st>>sx>>sy>>et>>ex>>ey){
         p.init(st,sx,sy,et,ex,ey);
-        int order = st/SLICE_TIME;
-        tp[order].push_back(p);
+        vecPoint.push_back(p);
         i++;
     }
-    //将二维数组合并为一维数组，并记录下标
-    orderNumber.push_back(0);
-    for(int j=0;j<tp.size();j++){
-        vecPoint.insert(vecPoint.end(),tp[j].begin(),tp[j].end());
-        orderNumber.push_back(vecPoint.size());
-    }
+    sort(vecPoint.begin(),vecPoint.end(),cmpStart);
 }
 
-void SharebilityNetwork::fetchReachableSpeedCells(int startX,int startY,int currentSliceAmount){
+int SharebilityNetwork::findRtreeByTime(int t){
+    int l = 0, r = slotStartTime.size()-1;
+    while(l < r){
+        int mid = (l+r)/2;
+        if(t >= slotStartTime[mid] && t < slotStartTime[mid+1]) return mid;
+        else if(t < slotStartTime[mid]) r = mid-1;
+        else l = mid + 1;
+    }
+    return l;
+}
+
+void SharebilityNetwork::fetchReachableSpeedCells(int startT,int startX,int startY,int timeThreshold,int slotAmount){
+    int startIndex = findRtreeByTime(startT);
+    vector<SpeedCellIndex> speedCellIndexTmp;
+    vector<SpeedCellRange> speedCellRangeTmp;
     SpeedCellRange speedCellRangeTmpOne(INDEX_AMOUNT,INDEY_AMOUNT,0,0);
     speedCellLimit.clear();
-    for(int i=0; i<SLICE_AMOUNT; i++){
-        speedCellIndexList[i].clear();
-        speedCellRangeList[i].clear();
+    speedCellIndexList.clear();
+    speedCellRangeList.clear();
+    for(int i=0; i<slotAmount; i++){
+        speedCellIndexList.push_back(speedCellIndexTmp);
+        speedCellRangeList.push_back(speedCellRangeTmp);
         speedCellLimit.push_back(speedCellRangeTmpOne);
     }
     //到达每个cell的最短时间
@@ -91,7 +127,7 @@ void SharebilityNetwork::fetchReachableSpeedCells(int startX,int startY,int curr
         //因为更新时间更短的cell时，原来的cell未删除，所以需要判断当前是否最新的cell
         if(currentCell.time != minTime[currentCell.x][currentCell.y]) continue;
         //将可达的cell存到队列中
-        int sliceIndex = currentCell.time/SLICE_TIME;
+        int sliceIndex = findRtreeByTime(startT+currentCell.time)-startIndex;
         speedCellIndexList[sliceIndex].push_back(currentCell);
         //更新可达范围边界
         if(currentCell.x < speedCellLimit[sliceIndex].lx) speedCellLimit[sliceIndex].lx = currentCell.x;
@@ -112,7 +148,7 @@ void SharebilityNetwork::fetchReachableSpeedCells(int startX,int startY,int curr
             //int nextTime = currentCell.time + round(halfDistance/speedGrid->getCellSpeedByMS(currentCell.x,currentCell.y) + halfDistance/speedGrid->getCellSpeedByMS(nextX,nextY));
             divisionCalculationTime += divisionClock.getTimeCost();
             //不超过时间阈值，并且不重复前往耗时更长的cell
-            if(nextTime<SLICE_TIME*currentSliceAmount && nextTime<minTime[nextX][nextY]){
+            if(nextTime<timeThreshold && nextTime<minTime[nextX][nextY]){
                 minTime[nextX][nextY] = nextTime;
                 q.push(SpeedCellIndex(nextX,nextY,nextTime));
             }
@@ -120,9 +156,12 @@ void SharebilityNetwork::fetchReachableSpeedCells(int startX,int startY,int curr
     }
 }
 
-void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int startX,int startY,int currentSliceAmount){
-    for(int i=0; i<SLICE_AMOUNT; i++){
-        speedCellRangeList[i].clear();
+void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int startT, int startX,int startY,int timeThreshold,int slotAmount){
+    int startIndex = findRtreeByTime(startT);
+    speedCellRangeList.clear();
+    vector<SpeedCellRange> speedCellRangeTmp;
+    for(int i=0; i<slotAmount; i++){
+        speedCellRangeList.push_back(speedCellRangeTmp);
     }
     //到达每个cell的最短时间
     vector<vector<int> > minTime;
@@ -145,7 +184,7 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
     q.push(SpeedCellIndex(startX,startY,0));
     minTime[startX][startY] = 0;
     //时间片标记
-    int sliceFlag = 0;
+    int slotFlag = 0;
     while(!q.empty()){ 
         queueTotalAmount++;
         SpeedCellIndex currentCell = q.top();
@@ -153,13 +192,13 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
         //因为更新时间更短的cell时，原来的cell未删除，所以需要判断当前是否最新的cell
         if(currentCell.time != minTime[currentCell.x][currentCell.y]) continue;
         //将可达的cell存到队列中
-        int sliceIndex = currentCell.time/SLICE_TIME;
-        //记录前sliceFlag个时间片的可达block
-        if(sliceIndex > sliceFlag){
+        int slotIndex = findRtreeByTime(startT+currentCell.time)-startIndex;
+        //记录前slotFlag个时间片的可达block
+        if(slotIndex > slotFlag){
             for(int i=0;i<currentSpeedCellRange.size();i++){
-                speedCellRangeList[sliceFlag].push_back(currentSpeedCellRange[i]);
+                speedCellRangeList[slotFlag].push_back(currentSpeedCellRange[i]);
             }
-            sliceFlag++;
+            slotFlag++;
         }
         //每个方向判断是否可达
         for(int i=0; i<DIRECTION_AMOUNT; i++){
@@ -173,7 +212,7 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
             int nextTime = currentCell.time + speedGrid->getCellSpendTime(currentCell.x,currentCell.y,i) + speedGrid->getCellSpendTime(nextX,nextY,i);
             divisionCalculationTime += divisionClock.getTimeCost();
             //不超过时间阈值，并且不重复前往耗时更长的cell
-            if(nextTime<SLICE_TIME*currentSliceAmount && nextTime<minTime[nextX][nextY]){
+            if(nextTime<timeThreshold && nextTime<minTime[nextX][nextY]){
                 //该cell已合并并且未到达
                 if(blockIndex[nextX][nextY] != -1 && minTime[nextX][nextY] == INF){
                     currentSpeedCellRange[blockIndex[nextX][nextY]].reachableAmount++;
@@ -226,7 +265,6 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
             }
             double rate = double(reachableAmount)/double(totalAmount);
             if(noDuplicateFlag && rate > maxReachableRate){
-                //if(rate<1) cout<<rate<<'='<<reachableAmount<<'/'<<totalAmount<<' ';
                 maxReachableRate = rate;
                 maxRateDirection = i;
                 maxRateBlockIndex = currentBlockIndex;
@@ -263,63 +301,52 @@ void SharebilityNetwork::fetchReachableSpeedCells_byPriorityQueueMerge(int start
         }
     }
     for(int i=0;i<currentSpeedCellRange.size();i++){
-        speedCellRangeList[sliceFlag].push_back(currentSpeedCellRange[i]);
+        speedCellRangeList[slotFlag].push_back(currentSpeedCellRange[i]);
     }
-}
-
-SharebilityNetwork::SharebilityNetwork(SpeedGrid *sg){
-    speedGrid = sg;
-    vector<SpeedCellIndex> speedCellIndexTmp;
-    vector<SpeedCellRange> speedCellRangeTmp;
-    const int INDEX_AMOUNT = (END_LATITUDE-START_LATITUDE)/CELL_LATITUDE_LENGTH;
-    const int INDEY_AMOUNT = (END_LONGITUDE-START_LONGITUDE)/CELL_LONGITUDE_LENGTH;
-    SpeedCellRange speedCellRangeTmpOne(INDEX_AMOUNT,INDEY_AMOUNT,0,0);
-    for(int i=0; i<SLICE_AMOUNT; i++) {
-        speedCellIndexList.push_back(speedCellIndexTmp);
-        speedCellRangeList.push_back(speedCellRangeTmp);
-        speedCellLimit.push_back(speedCellRangeTmpOne);
-    }
-}
-
-SharebilityNetwork::~SharebilityNetwork(){
-    vecPoint.clear();
-    vecEdge.clear();
-    head.clear();
 }
 
 void SharebilityNetwork::buildNetworkFromFile(string filePath){
     Timer buildClock;
     readPoint(filePath);
-     //分块建立R树,只有orderNumber.size()-1块
-    for(int i=0;i<orderNumber.size()-1;i++){
-        for(int j=orderNumber[i];j<orderNumber[i+1];j++){
-            //节点
-            Rect rt(vecPoint[j].getStartLatitude(),vecPoint[j].getStartLongitude());
-            vecTree[i].Insert(rt.min,rt.max,j);
+    // 构建R树,共有slotStartTime.size棵
+    int i=0; // R树下标
+    slotStartTime.push_back(0);
+    for(int j=0;j<vecPoint.size();j++){
+        if(j != 0 && j % SLOT_TRIPS == 0){
+            i++;
+            slotStartTime.push_back(vecPoint[j].getStartTime());
         }
+        //节点
+        Rect rt(vecPoint[j].getStartLatitude(),vecPoint[j].getStartLongitude());
+        vecTree[i].Insert(rt.min,rt.max,j);
     }
     //初始化赋值-1
     for(int i=0;i<vecPoint.size();i++) head.push_back(-1);
     //连接单向边
     for(int i=0;i<vecPoint.size();i++){
-        //R树搜索结果清空
+        // R树搜索结果清空
         vecAns.clear();
         int endTime=vecPoint[i].getEndTime();
-        int index=endTime/60;
-        for(int j=0;j<SLICE_AMOUNT;j++){
+        int index = findRtreeByTime(endTime);
+        // 不能超过当天24时
+        int timeThreshold = min(24*60*60-endTime, MAX_TIME_THRESHOLD);
+        // 查询的时间片数量
+        int slotAmount = findRtreeByTime(endTime+timeThreshold)-index+1;
+        for(int j=0;j<slotAmount;j++){
             int indey = index+j;
-            if(indey>=orderNumber.size()-1) continue;
-            searchRtree(vecTree[indey],j,endTime,vecPoint[i].getEndLongitude(),vecPoint[i].getEndLatitude());
+            int slotTime = 24*60*60;
+            if(indey+1 < slotStartTime.size()) slotTime = slotStartTime[indey+1];
+            searchRtree(vecTree[indey], slotTime, endTime, vecPoint[i].getEndLongitude(), vecPoint[i].getEndLatitude());
         }
         //建边
-        for(int j=0;j<vecAns.size();j++) addEdge(i,vecAns[j]);
-            //if(existEdge(i,vecAns[j])) addEdge(i,vecAns[j]);
+        for(int j=0;j<vecAns.size();j++)
+            if(existEdge(i,vecAns[j])) addEdge(i,vecAns[j]);
     }
     cout<<"[SharebilityNetWork] - Cost of time: "<<buildClock.getTimeCost()<<"s"<<endl;
 }
 
-void SharebilityNetwork::cellQuery(int index, int currentSliceAmount){
-    for(int j=0; j<currentSliceAmount; j++){
+void SharebilityNetwork::cellQuery(int index, int slotAmount){
+    for(int j=0; j<slotAmount; j++){
         int indey = index+j;
         //从第index分钟到第indey分钟的全部网格
         for(int k=0; k<=j; k++){
@@ -338,137 +365,8 @@ void SharebilityNetwork::cellQuery(int index, int currentSliceAmount){
     }
 }
 
-void SharebilityNetwork::cellQuery_byDivideAndConquer(int index, int currentSliceAmount){
-    for(int j=1; j<currentSliceAmount; j++){
-        //范围边界更新，speedCellLimit[j]是第j分钟的边界，不是前j分钟的，更新为前j分钟的边界
-        if(speedCellLimit[j-1].lx < speedCellLimit[j].lx) speedCellLimit[j].lx = speedCellLimit[j-1].lx;
-        if(speedCellLimit[j-1].ly < speedCellLimit[j].ly) speedCellLimit[j].ly = speedCellLimit[j-1].ly;
-        if(speedCellLimit[j-1].rx > speedCellLimit[j].rx) speedCellLimit[j].rx = speedCellLimit[j-1].rx;
-        if(speedCellLimit[j-1].ry > speedCellLimit[j].ry) speedCellLimit[j].ry = speedCellLimit[j-1].ry;
-    }
-    //不需要使用整个速度网格，空间时间浪费过大
-    int mergeLengthX = (speedCellLimit[currentSliceAmount-1].rx-speedCellLimit[currentSliceAmount-1].lx)/MAX_CELL_RANGE*MAX_CELL_RANGE+MAX_CELL_RANGE;
-    int mergeLengthY = (speedCellLimit[currentSliceAmount-1].ry-speedCellLimit[currentSliceAmount-1].ly)/MAX_CELL_RANGE*MAX_CELL_RANGE+MAX_CELL_RANGE;
-    //是否会越界
-    if(speedCellLimit[currentSliceAmount-1].lx+mergeLengthX >= INDEX_AMOUNT) speedCellLimit[currentSliceAmount-1].lx = INDEX_AMOUNT-mergeLengthX;
-    if(speedCellLimit[currentSliceAmount-1].ly+mergeLengthY >= INDEY_AMOUNT) speedCellLimit[currentSliceAmount-1].ly = INDEY_AMOUNT-mergeLengthY;
-    vector<vector<int>> mergeRange;
-    vector<int> mergeTmp;
-    for(int k=0;k<mergeLengthY;k++) mergeTmp.push_back(-2);
-    for(int k=0;k<mergeLengthX;k++) mergeRange.push_back(mergeTmp);
-    //从第index分钟到第indey分钟的全部网格
-    for(int k=0; k<currentSliceAmount; k++){
-        for(int z=0; z<speedCellIndexList[k].size(); z++){
-            int x = speedCellIndexList[k][z].x-speedCellLimit[currentSliceAmount-1].lx;
-            int y = speedCellIndexList[k][z].y-speedCellLimit[currentSliceAmount-1].ly;
-            //表示可达
-            mergeRange[x][y] = k;
-        }
-    }
-    //如果该网格平均速度为0，可以一同合并，但标记为-1
-    for(int p=0;p<mergeLengthX;p++)
-        for(int q=0;q<mergeLengthY;q++)
-            if(speedGrid->getCellSpeedByMS(p+speedCellLimit[currentSliceAmount-1].lx,q+speedCellLimit[currentSliceAmount-1].ly) < 0.01){
-                mergeRange[p][q] = -1;
-            }
-    for(int k=2;k<=MAX_CELL_RANGE;k*=2){
-        for(int p=0;p<mergeLengthX/k;p++)
-            for(int q=0;q<mergeLengthY/k;q++){
-                int p2 = p*2, q2 = q*2;
-                int x1 = mergeRange[p2][q2];
-                int x2 = mergeRange[p2+1][q2];
-                int x3 = mergeRange[p2][q2+1];
-                int x4 = mergeRange[p2+1][q2+1];
-                int lx1 = p*k, ly1 = q*k, rx1 = lx1+k/2-1, ry1 = ly1+k/2-1;
-                int lx2 = rx1+1, ly2 = ly1, rx2 = lx2+k/2-1, ry2 = ly2+k/2-1;
-                int lx3 = lx1, ly3 = ry1+1, rx3 = lx3+k/2-1, ry3 = ly3+k/2-1;
-                int lx4 = rx1+1, ly4 = ry1+1, rx4 = lx4+k/2-1, ry4 = ly4+k/2-1;
-                int timeI = -2;
-                if(x1 >= 0) timeI = x1;
-                else if(x2 >= 0) timeI = x2;
-                else if(x3 >= 0) timeI = x3;
-                else if(x4 >= 0) timeI = x4;
-                if(timeI == -2) continue; //没有可查询网格
-                //4格均为-1，合并为-1
-                if(x1==-1 && x2==-1 && x3==-1 && x4==-1){
-                    mergeRange[p][q] = -1;
-                }//4格均为i或-1，合并为i
-                else if((x1==-1||x1==timeI) && (x2==-1||x2==timeI) && (x3==-1||x3==timeI) && (x4==-1||x4==timeI)){
-                    mergeRange[p][q] = timeI;
-                    if(k == MAX_CELL_RANGE){
-                        SpeedCellRange rangeTmp(lx1,ly1,rx4,ry4);
-                        speedCellRangeList[timeI].push_back(rangeTmp);
-                    }
-                }else{
-                    mergeRange[p][q] = -2;
-                    //相邻2格相同，合并并记录
-                    if(x1>=0 && x2>=0 && x1==x2){
-                        SpeedCellRange rangeTmp(lx1,ly1,rx2,ry2);
-                        speedCellRangeList[x1].push_back(rangeTmp);
-                        x1 = -2;
-                        x2 = -2;
-                    }
-                    if(x1>=0 && x3>=0 && x1==x3){
-                        SpeedCellRange rangeTmp(lx1,ly1,rx3,ry3);
-                        speedCellRangeList[x1].push_back(rangeTmp);
-                        x1 = -2;
-                        x3 = -2;
-                    }
-                    if(x2>=0 && x4>=0 && x2==x4){
-                        SpeedCellRange rangeTmp(lx2,ly2,rx4,ry4);
-                        speedCellRangeList[x2].push_back(rangeTmp);
-                        x2 = -2;
-                        x4 = -2;
-                    }
-                    if(x3>=0 && x4>=0 && x3==x4){
-                        SpeedCellRange rangeTmp(lx3,ly3,rx4,ry4);
-                        speedCellRangeList[x3].push_back(rangeTmp);
-                        x3 = -2;
-                        x4 = -2;
-                    }
-                    //只有1格，直接记录
-                    if(x1 >= 0){
-                        SpeedCellRange rangeTmp(lx1,ly1,rx1,ry1);
-                        speedCellRangeList[x1].push_back(rangeTmp);
-                    }
-                    if(x2 >= 0){
-                        SpeedCellRange rangeTmp(lx2,ly2,rx2,ry2);
-                        speedCellRangeList[x2].push_back(rangeTmp);
-                    }
-                    if(x3 >= 0){
-                        SpeedCellRange rangeTmp(lx3,ly3,rx3,ry3);
-                        speedCellRangeList[x3].push_back(rangeTmp);
-                    }
-                    if(x4 >= 0){
-                        SpeedCellRange rangeTmp(lx4,ly4,rx4,ry4);
-                        speedCellRangeList[x4].push_back(rangeTmp);
-                    }
-                }
-            }
-    }
-    for(int j=0; j<currentSliceAmount; j++){
-        int indey = index+j;
-        //从第index分钟到第indey分钟的全部网格
-        for(int k=0; k<=j; k++){
-            blockTotalAmount += speedCellRangeList[k].size();
-            for(int z=0;z<speedCellRangeList[k].size();z++){
-                int lx = speedCellRangeList[k][z].lx+speedCellLimit[currentSliceAmount-1].lx;
-                int ly = speedCellRangeList[k][z].ly+speedCellLimit[currentSliceAmount-1].ly;
-                int rx = speedCellRangeList[k][z].rx+speedCellLimit[currentSliceAmount-1].lx;
-                int ry = speedCellRangeList[k][z].ry+speedCellLimit[currentSliceAmount-1].ly;
-                double minLat = START_LATITUDE+CELL_LATITUDE_LENGTH*lx;
-                double minLon = START_LONGITUDE+CELL_LONGITUDE_LENGTH*ly;
-                double maxLat = minLat+CELL_LATITUDE_LENGTH*(rx-lx+1);
-                double maxLon = minLon+CELL_LONGITUDE_LENGTH*(ry-ly+1);  
-                Rect searchRect(minLat,minLon,maxLat,maxLon);
-                vecTree[indey].Search(searchRect.min, searchRect.max, MySearchCallback, NULL);
-            }
-        }
-    }
-}
-
-void SharebilityNetwork::cellQuery_byPriorityQueueMerge(int index,int currentSliceAmount){
-    for(int j=0; j<currentSliceAmount; j++){
+void SharebilityNetwork::cellQuery_byPriorityQueueMerge(int index,int slotAmount){
+    for(int j=0; j<slotAmount; j++){
         int indey = index+j;
         blockTotalAmount += speedCellRangeList[j].size();
         for(int k=0;k<speedCellRangeList[j].size();k++){
@@ -496,104 +394,62 @@ void SharebilityNetwork::buildNetworkFromFile_bySpeedGrid(string filePath){
     queueTotalAmount = 0;
     Timer buildClock;
     readPoint(filePath);
-     //分块建立R树,只有orderNumber.size()-1块
-    for(int i=0;i<orderNumber.size()-1;i++){
-        if(i%60 == 0){
-            cout<<i/60<<":"<<(orderNumber[i+60]-orderNumber[i]);
-            cout<<endl;
+    // 构建R树,共有slotStartTime.size棵
+    Timer rtreeClock;
+    int i=0; // R树下标
+    slotStartTime.push_back(0);
+    for(int j=0;j<vecPoint.size();j++){
+        if(j != 0 && j % SLOT_TRIPS == 0){
+            i++;
+            slotStartTime.push_back(vecPoint[j].getStartTime());
         }
-        for(int j=orderNumber[i];j<orderNumber[i+1];j++){
-            //节点
-            Rect rt(vecPoint[j].getStartLatitude(),vecPoint[j].getStartLongitude());
-            vecTree[i].Insert(rt.min,rt.max,j);
-        }
+        //节点
+        Rect rt(vecPoint[j].getStartLatitude(),vecPoint[j].getStartLongitude());
+        vecTree[i].Insert(rt.min,rt.max,j);
     }
+    rtreeTime = rtreeClock.getTimeCost();
     //初始化赋值-1
     for(int i=0;i<vecPoint.size();i++) head.push_back(-1);
     //连接单向边
     for(int i=0;i<vecPoint.size();i++){
         //R树搜索结果清空
         vecAns.clear();
-        int endTime=vecPoint[i].getEndTime();
-        int index=endTime/60;
-        int currentSliceAmount = SLICE_AMOUNT;
-        if(index+SLICE_AMOUNT-1 >= orderNumber.size()-1){
-            currentSliceAmount = orderNumber.size()-index-1;
-        }
+        int endTime = vecPoint[i].getEndTime();
+        int index = findRtreeByTime(endTime);
+        // 不能超过当天24时
+        int timeThreshold = min(24*60*60-endTime, MAX_TIME_THRESHOLD);
+        // 查询的时间片数量
+        int slotAmount = findRtreeByTime(endTime+timeThreshold)-index+1;
         //位置所在速度cell下标
         int startX = (vecPoint[i].getEndLatitude()-START_LATITUDE)/CELL_LATITUDE_LENGTH;
         int startY = (vecPoint[i].getEndLongitude()-START_LONGITUDE)/CELL_LONGITUDE_LENGTH;
         //第一步：搜索全部可达网格
         Timer findClock1;
         //fetchReachableSpeedCells(startX,startY,currentSliceAmount);
-        fetchReachableSpeedCells_byPriorityQueueMerge(startX,startY,currentSliceAmount);
-        findTime1 +=  findClock1.getTimeCost();
+        fetchReachableSpeedCells_byPriorityQueueMerge(endTime, startX, startY, timeThreshold, slotAmount);
+        findTime1 += findClock1.getTimeCost();
         //第二步：查询每一个可达网格
         Timer findClock2;
         //方法1：一个一个查询
-        //cellQuery(index,currentSliceAmount);
-        //方法2：分治法合并后查询
-        //cellQuery_byDivideAndConquer(index,currentSliceAmount);
-        //方法3：优先队列合并搜索
-        cellQuery_byPriorityQueueMerge(index,currentSliceAmount);
+        //cellQuery(index,slotAmount);
+        //方法2：优先队列合并搜索
+        cellQuery_byPriorityQueueMerge(index, slotAmount);
         findTime2 +=  findClock2.getTimeCost();
-        //第三步：连边
+        //第三步：连边 
         Timer findClock3;
-        for(int j=0;j<vecAns.size();j++) addEdge(i,vecAns[j]);
+        for(int j=0;j<vecAns.size();j++) 
+            if(existEdge(i,vecAns[j])) addEdge(i,vecAns[j]);
         findTime3 +=  findClock3.getTimeCost();
     }
+    cout<<"rtreeTime: "<<rtreeTime<<endl;
     cout<<"findTime1: "<<findTime1<<endl;
     cout<<"divisionCalculationTime: "<<divisionCalculationTime<<endl;
     cout<<"findTime2: "<<findTime2<<endl;
-    cout<<"rtreeTime: "<<rtreeTime<<endl;
     cout<<"findTime3: "<<findTime3<<endl;
     cout<<"blockTotalAmount: "<<blockTotalAmount<<endl; 
     cout<<"Amount of all priority queues: "<<queueTotalAmount<<endl;
     cout<<"[SharebilityNetWork] - Cost of time: "<<buildClock.getTimeCost()<<"s"<<endl;
 }
-
-/*
-void SharebilityNetwork::buildNetworkFromFile_multithread(string filePath){
-    Timer buildClock;
-    readPoint(filePath);
-    //分块建立R树,只有orderNumber.size()-1块
-    for(int i=0;i<orderNumber.size()-1;i++){
-        for(int j=orderNumber[i];j<orderNumber[i+1];j++){
-            //节点
-            Rect rt(vecPoint[j].getStartLatitude(),vecPoint[j].getStartLongitude());
-            vecTree[i].Insert(rt.min,rt.max,j);
-        }
-    }
-    //初始化赋值-1
-    for(int i=0;i<vecPoint.size();i++) head.push_back(-1);
-    //连接单向边
-    for(int i=0;i<vecPoint.size();i++){
-        //R树搜索结果清空
-        vecAns.clear();
-        int endTime=vecPoint[i].getEndTime();
-        int index=endTime/60;
-        //多线程
-        for(int k=0;k<=SLICE_AMOUNT/THREAD_AMOUNT;k++){
-            thread vecTh[THREAD_AMOUNT];
-            for(int z=0;z<THREAD_AMOUNT;z++){
-                //时间片块数
-                int j = k*THREAD_AMOUNT+z;
-                int indey=index+j;
-                if(j>=SLICE_AMOUNT || indey>=orderNumber.size()-1){
-                    vecTh[z] = thread(nothing);
-                    continue;
-                }
-                vecTh[z] = thread(searchRtree,ref(vecTree[indey]),j,endTime,vecPoint[i].getEndLongitude(),vecPoint[i].getEndLatitude());
-            }
-            //线程join
-            for(int z=0;z<THREAD_AMOUNT;z++) vecTh[z].join();
-        }
-        //建边
-        for(int j=0;j<vecAns.size();j++) addEdge(i,vecAns[j]);
-    }
-    cout<<"[SharebilityNetWork] - Cost of time: "<<buildClock.getTimeCost()<<"s"<<endl;
-}*/
-
 
 void SharebilityNetwork::addEdge(int x,int y){
     Edge e;
@@ -607,13 +463,22 @@ bool SharebilityNetwork::existEdge(int x,int y){
     //两个订单时间间隔=y开始时间-x结束时间
     int t=vecPoint[y].getStartTime()-vecPoint[x].getEndTime();
     //x时间要比y早，且时间间隔不能大于规定时限
-    if(t<=0 || t>maxLimitTime) return false;
-    //时间内车能从x点到达y点 
-    //设定汽车平均行驶速度36.8km/h，即11m/s
+    if(t <= 0 || t > MAX_TIME_THRESHOLD) return false;
+    /*
+    //时间内车能从x点到达y点,设定汽车平均行驶速度36.8km/h,即11m/s
     if(distance(vecPoint[x].getEndLongitude(),vecPoint[x].getEndLatitude(),vecPoint[y].getStartLongitude(),vecPoint[y].getEndLatitude())>11.0*t){
         return false;
-    }
+    }*/
     return true;
+}
+
+void SharebilityNetwork::outputEdges(std::string filePath){
+    ofstream outfile;
+    outfile.open(filePath.c_str(),ios::out);
+    for(int i=0;i<vecEdge.size();i++){
+        outfile<<vecEdge[i].getStart()<<' '<<vecEdge[i].getEnd()<<endl;
+    }
+    outfile.close();
 }
 
 void SharebilityNetwork::printNetwork(){

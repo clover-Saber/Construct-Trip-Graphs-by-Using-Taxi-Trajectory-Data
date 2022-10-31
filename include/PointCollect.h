@@ -5,8 +5,8 @@
 #include <vector>
 #include <map>
 
+#include "Point.h"
 #include "PositionClean.h"
-#include "File.h"
 
 //从SimplePosition中获取Point
 class PointCollect{
@@ -28,7 +28,7 @@ class PointCollect{
         void collectPointFromFile(std::string filePath);
         void writePointToFile(std::string filePath);
         //计算原始车辆总计里程
-        void calculateOriginalMileage(File &f,std::string rightDate);
+        void calculateOriginalMileage();
         double getOriginalMileage(){return originalMileage;};
         //返回全部行程总计里程
         double getTotalTripMileage();

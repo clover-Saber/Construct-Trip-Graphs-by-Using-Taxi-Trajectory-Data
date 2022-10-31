@@ -68,14 +68,14 @@ void nothing(){
 }
 
 //R树搜索，多线程
-void searchRtree(RTree<int,double,2, double> &rtree,int j,int endTime,double lon,double lat){
+void searchRtree(RTree<int,double,2, double> &rtree,int slotTime,int endTime,double lon,double lat){
     //搜索经纬度边界
     //纬度相等的情况下,经度每隔1度，距离相差约100000米
     //经度相等的情况下,纬度每隔1度，距离相差约111320米
     //此处估算，出租车一分钟660米，经度0.0066，纬度0.0059
-    double tmp=(endTime%60)/60;
-    double tlon=0.0066*(j+tmp);
-    double tlat=0.0059*(j+tmp);
+    double tmp=(slotTime-endTime)/60;
+    double tlon=0.0066*tmp;
+    double tlat=0.0059*tmp;
     Rect searchRect(lat-tlat,lon-tlon,lat+tlat,lon+tlon);
     int nhits = rtree.Search(searchRect.min, searchRect.max, MySearchCallback, NULL);
     return;

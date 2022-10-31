@@ -105,3 +105,14 @@ double HopcroftKarpAlgorithm::getOptimizeMileage(SharebilityNetwork &shareNet){
     }
     return tot;
 }
+
+void HopcroftKarpAlgorithm::outputMatch(std::string filePath){
+    ofstream outfile;
+    outfile.open(filePath.c_str(),ios::out);
+    for(int i=0;i<xMatch.size();i++){
+        if(xMatch[i] != -1){
+            outfile<<i<<' '<<xMatch[i]<<endl;
+        }
+    }
+    outfile.close();
+}

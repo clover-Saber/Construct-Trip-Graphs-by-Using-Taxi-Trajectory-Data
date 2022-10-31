@@ -6,7 +6,7 @@
 #include<cmath>
 
 //数据文件基础路径
-const std::string BASE_PATH = "E://data//";
+const std::string BASE_PATH = "F://data//";
 //原始位置文件相对路径
 const std::vector<std::string> POSITION_FILE_LIST = {"07","09","04"};
 //const vector<std::string> FILELIST = {"01","04","07","08","09","10","11","12","14","15","18","24"};
@@ -14,17 +14,17 @@ const std::vector<std::string> POSITION_FILE_LIST = {"07","09","04"};
 //数据清洗规模，-1为全部
 const int POSITION_CLEAN_AMOUNT = -1;
 const int SIMPLE_POSITION_READ_AMOUNT = -1;
-
+ 
 //订单排序方式，0不排序，1按开始时间排序，2按结束时间排序
 const int POINT_SORT_METHOD = 0;
 
-//时间片划分时间/秒
-const int SLICE_TIME = 60;
-const int SLICE_AMOUNT = 15;
+//时间片中任务数
+const int SLOT_TRIPS = 500;
+//时间阈值
+const int MAX_TIME_THRESHOLD = 15*60;
 //订单任务选取数量，-1为全部
-const int POINT_AMOUNT = 300000;
-//线程数
-const int THREAD_AMOUNT = 4;
+const int POINT_AMOUNT = 60;
+
 //搜索方向
 const int DIRECTION_AMOUNT = 8;
 const int DIRECTION_X[] = {0,0,-1,1,-1,-1,1,1};

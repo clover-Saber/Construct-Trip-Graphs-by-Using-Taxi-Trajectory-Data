@@ -138,7 +138,7 @@ void PointCollect::writePointToFile(string filePath){
     outfile.close();
 }
 
-void PointCollect::calculateOriginalMileage(File &f,string rightDate){
+void PointCollect::calculateOriginalMileage(){
     originalMileage = 0;
     map<string,vector<SimplePosition> >::iterator it;
     for(it=simplePositionMap.begin();it!=simplePositionMap.end();it++){
@@ -152,9 +152,9 @@ void PointCollect::calculateOriginalMileage(File &f,string rightDate){
 }
 
 double PointCollect::getTotalTripMileage(){
-    double total=0;
+    double total=0;   
     for(int i=0;i<mileage.size();i++) total += mileage[i];
-    return total;
+    return total; 
 }
 
 void PointCollect::printVecPoint(){

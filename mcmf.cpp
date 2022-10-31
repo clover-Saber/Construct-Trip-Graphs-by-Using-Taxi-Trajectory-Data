@@ -111,7 +111,6 @@ void MCMF_CS2::set_arc( long tail_node_id, long head_node_id,
 {
 	// DIMACS format:
 	// c arc has <tail> <head> <capacity l.b.> <capacity u.b> <cost>
-
 	if ( tail_node_id < 0 || tail_node_id > _n || 
 		 head_node_id < 0 || head_node_id > _n ) {
 		printf("Error:  Arc with head or tail out of bounds inside CS2\n");
@@ -1562,7 +1561,7 @@ void MCMF_CS2::cs2( double *objective_cost)
 	finishup( objective_cost );
 }
 
-int MCMF_CS2::run_cs2()
+double MCMF_CS2::run_cs2()
 {
 	// example of flow network in DIMACS format:
 	//
@@ -1614,7 +1613,7 @@ int MCMF_CS2::run_cs2()
 	// (5) initializations;
 	_m = 2 * _m;
 	cs2_initialize(); // works already with 2*m;
-	print_graph(); // exit(1); // debug;
+	//print_graph(); // exit(1); // debug;
 
 	printf("\nc CS 4.3\n");
 	printf("c nodes: %ld  arcs: %ld\n", _n, _m/2 );
@@ -1651,13 +1650,14 @@ int MCMF_CS2::run_cs2()
 	}
 
 	// () PRINT_ANS?
+	/*
 	if ( _print_ans == true ) {
 		print_solution();
-	}
+	}*/
 
 	// () cleanup;
 	deallocate_arrays();
-	return 0;
+	return objective_cost;
 }
 
 

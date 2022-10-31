@@ -2,6 +2,7 @@
 #define _HOPCROFTKARPALGORITHM_H
 #include <vector>
 #include <queue>
+#include <string>
 #include "SharebilityNetwork.h"
 
 class HopcroftKarpAlgorithm{
@@ -32,6 +33,8 @@ class HopcroftKarpAlgorithm{
         double getOptimizeMileage(SharebilityNetwork &shareNet);
         //花费时间，单位为秒
         double time(){return double(end-start)/1000;};
+        //输出匹配
+        void outputMatch(std::string filePath);
 };
 
 #endif
